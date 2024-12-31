@@ -128,3 +128,4 @@ if __name__ == "__main__":
     parser.add_argument("--img", default=str(ASSETS / "bus.jpg"), help="Path to input image.")
     args = parser.parse_args()
     main(args.model, args.img)
+    
