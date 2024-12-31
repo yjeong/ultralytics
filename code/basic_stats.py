@@ -28,10 +28,10 @@ def image_size_stats(directory):
 
 # 데이터셋 경로 설정
 yaml_paths = [
-    '/mnt/nas4/jyh/ultralytics/datasets/work_cd.yaml',
-    '/mnt/nas4/jyh/ultralytics/datasets/work_cn.yaml',
-    '/mnt/nas4/jyh/ultralytics/datasets/work_td.yaml',
-    '/mnt/nas4/jyh/ultralytics/datasets/work_tn.yaml',
+    '/mnt/nas4/jyh/ultralytics/code/work_cd.yaml',
+    '/mnt/nas4/jyh/ultralytics/code/work_cn.yaml',
+    '/mnt/nas4/jyh/ultralytics/code/work_td.yaml',
+    '/mnt/nas4/jyh/ultralytics/code/work_tn.yaml',
 ]
 
 for yaml_file in yaml_paths:
