@@ -1,23 +1,22 @@
-# work.yaml
+# work_cd_cls.yaml
 
-# 학습 데이터 경로 (절대 경로 또는 프로젝트 내 상대 경로 사용)
-train:
-  #- datasets/testset/army_add/cctv_day/images/train
-  - datasets/testset/cctv_day/images/train
-  #- datasets/testset/cctv_night/images/train
-  #- datasets/testset/tod_day/images/train
-  #- datasets/testset/tod_night/images/train
+# (1) path: 전체 데이터 루트 경로
+path: datasets/testset/cctv_day/images
 
-# 검증 데이터 경로
-val:
-  #- datasets/testset/army_add/cctv_day/images/val
-  - datasets/testset/cctv_day/images/val
-  #- datasets/testset/cctv_night/images/val
-  #- datasets/testset/tod_day/images/val
-  #- datasets/testset/tod_night/images/val
+# (2) train, val: 상위 path로부터의 하위 폴더명 지정
+train: train
+val: val
+# (테스트 세트가 있다면 test: test 등 추가 가능)
 
-# 클래스 수
-nc: 10
-
-# 클래스 이름 리스트 (매핑된 순서대로)
-names: ['Civilian ship', 'Warship', 'Submarine', 'Inflatable boat', 'Person', 'Aircraft', 'Rotary-wing', 'Drone', 'Standard buoy', 'Vehicle']
+# (3) names: 인덱스→클래스명 매핑 (선택적)
+names:
+  0: 'Civilian ship'
+  1: 'Warship'
+  2: 'Submarine'
+  3: 'Inflatable boat'
+  4: 'Person'
+  5: 'Aircraft'
+  6: 'Rotary-wing'
+  7: 'Drone'
+  8: 'Standard buoy'
+  9: 'Vehicle'
