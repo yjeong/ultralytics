@@ -1,8 +1,9 @@
+# train_cls_head.py
+
 import os
-import matplotlib.pyplot as plt
-from ultralytics import YOLO
-import cv2
 import numpy as np
+import cv2
+from ultralytics import YOLO
 
 def ensure_10class_folders(data_dir, num_classes=10):
     """
@@ -25,10 +26,11 @@ def ensure_10class_folders(data_dir, num_classes=10):
                 cv2.imwrite(dummy_path, dummy_image)
                 print(f"[INFO] Created dummy image in empty class folder: {dummy_path}")
 
+# 함수 정의의
 def train_classification_head(
     data_dir,
     pretrained_weights="yolo11x-cls.pt",
-    epochs=30,
+    epochs=3,
     batch_size=16,
     img_size=224,
     lr=1e-4,
@@ -36,25 +38,16 @@ def train_classification_head(
     experiment_name="exp"
 ):
     """
-    분류(Classify) 태스크로 모델을 학습합니다.
-    - Backbone, Neck, Reg Head는 동결(freeze)되고, Classification Head만 학습됩니다.
+    분류(Classify) 태스크로 YOLO 모델의 Classification Head만 학습합니다.
+    - Backbone, Neck, Reg Head는 동결되고, Classification Head만 학습됩니다.
     - 결과(가중치, 그래프, 지표)는 지정된 결과 폴더에 저장됩니다.
-    
-    Parameters:
-    - data_dir (str): 분류용 데이터 폴더 경로 (train/0..9, val/0..9 구조)
-    - pretrained_weights (str): 사전 학습된 가중치 파일 경로
-    - epochs (int): 학습 에폭 수
-    - batch_size (int): 배치 사이즈
-    - img_size (int): 이미지 크기
-    - lr (float): 학습률
-    - project_dir (str): 결과 저장 상위 디렉토리
-    - experiment_name (str): 실험 이름 (결과 폴더명)
     """
-    
+    import pandas as pd  # 추가
+
     # (A) 10개 클래스 폴더 보장 (빈 폴더 자동 생성 및 더미 이미지 추가)
     ensure_10class_folders(data_dir, num_classes=10)
 
-    # (B) 모델 로드: 분류 모드 + 사전 학습 가중치
+    # (B) YOLO 모델 로드: 분류 모드 + 사전 학습 가중치
     model_ = YOLO(pretrained_weights, task="classify")
 
     # (C) Manual Freeze: 모든 레이어 동결 후, 분류 헤드만 풀기
@@ -134,12 +127,13 @@ def train_classification_head(
     else:
         print("[INFO] final accuracy_top1 : N/A")
 
-    return results
+    return experiment_path
 
 # -------------------------------------------------------
-# (메인) 여러 폴더 반복 처리 예시
+# (메인) 단일 폴더 학습 예시
 # -------------------------------------------------------
 if __name__ == "__main__":
+    # 학습할 데이터 디렉토리와 실험 이름을 명확하게 지정
     data_dirs = [
         ("datasets/testset/cctv_day_cls", "cctv_day_exp"),
         ("datasets/testset/cctv_night_cls", "cctv_night_exp"),
@@ -147,12 +141,13 @@ if __name__ == "__main__":
         ("datasets/testset/tod_night_cls", "tod_night_exp")
     ]
 
+    #함수 호출
     for folder_path, exp_name in data_dirs:
-        print(f"\n[INFO] Training folder: {folder_path}")
+        print(f"\n[INFO] Starting training for folder: {folder_path} with experiment name: {exp_name}")
         train_classification_head(
             data_dir=folder_path,
             pretrained_weights="yolo11x-cls.pt",
-            epochs=30,
+            epochs=3,
             batch_size=16,
             img_size=224,
             lr=1e-4,

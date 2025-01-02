@@ -101,6 +101,7 @@ def batch_classify_vit(model, feature_extractor, crop_dir, output_csv, device='c
             print(f"[INFO] Classified {img_path}: {prediction} ({score:.4f})")
     
     # CSV 저장
+    os.makedirs(os.path.dirname(output_csv), exist_ok=True)
     with open(output_csv, 'w', newline='') as csvfile:
         fieldnames = ['image_path', 'true_class', 'predicted_class', 'score']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -331,7 +332,8 @@ def detect_and_crop_objects(yolo_model, image_path, output_dir, min_size=10, dev
         print(f"[WARNING] Could not read image: {image_path}")
         return []
     
-    results = yolo_model.predict(source=img, conf=0.25, device=device)
+    # YOLO 모델의 predict 메서드 사용
+    results = yolo_model.predict(source=image_path, conf=0.25, device=device)
     
     cropped_image_paths = []
     for result in results:
@@ -383,42 +385,41 @@ def batch_detect_and_crop(yolo_model, src_image_dir, dst_crop_dir, min_size=10, 
             print(f"[INFO] No valid objects found in image: {image_path}")
 
 def main():
-    # 설정: 학습된 YOLO 가중치 파일 경로
-    trained_weights_path = "results/cls_head/cctv_day_exp/weights/best.pt"  # 실제 경로로 변경
-    
-    # 설정: 원본 이미지 디렉토리 목록
-    source_directories = [
-        "datasets/testset/army_add/cctv_day/images/train",
-        "datasets/testset/army_add/cctv_day/images/val",
-        "datasets/testset/cctv_day/images/train",
-        "datasets/testset/cctv_day/images/val",
-        "datasets/testset/cctv_night/images/train",
-        "datasets/testset/cctv_night/images/val",
-        "datasets/testset/tod_day/images/train",
-        "datasets/testset/tod_day/images/val",
-        "datasets/testset/tod_night/images/train",
-        "datasets/testset/tod_night/images/val",
+    # 설정: 데이터셋 목록
+    datasets = [
+        {
+            "name": "cctv_day",
+            "yolo_weights_path": "results/cls_head/cctv_day_exp/weights/best.pt",
+            "splits": ["train", "val"],
+            "source_base_dir": "datasets/testset/cctv_day_cls",
+            "cropped_base_dir": "datasets/testset/cctv_day_cls_cropped",
+            "classification_results_dir": "results/pipeline/cctv_day",
+        },
+        {
+            "name": "cctv_night",
+            "yolo_weights_path": "results/cls_head/cctv_night_exp/weights/best.pt",
+            "splits": ["train", "val"],
+            "source_base_dir": "datasets/testset/cctv_night_cls",
+            "cropped_base_dir": "datasets/testset/cctv_night_cls_cropped",
+            "classification_results_dir": "results/pipeline/cctv_night",
+        },
+        {
+            "name": "tod_day",
+            "yolo_weights_path": "results/cls_head/tod_day_exp/weights/best.pt",
+            "splits": ["train", "val"],
+            "source_base_dir": "datasets/testset/tod_day_cls",
+            "cropped_base_dir": "datasets/testset/tod_day_cls_cropped",
+            "classification_results_dir": "results/pipeline/tod_day",
+        },
+        {
+            "name": "tod_night",
+            "yolo_weights_path": "results/cls_head/tod_night_exp/weights/best.pt",
+            "splits": ["train", "val"],
+            "source_base_dir": "datasets/testset/tod_night_cls",
+            "cropped_base_dir": "datasets/testset/tod_night_cls_cropped",
+            "classification_results_dir": "results/pipeline/tod_night",
+        },
     ]
-    
-    # 설정: 패칭된 이미지 저장 디렉토리 목록 --> 패칭된 이미지 저장할 경로. (source 디렉토리와 매칭)
-    cropped_directories = [
-        "results/army_add_vit/cctv_day_cls/train",
-        "results/army_add_vit/cctv_day_cls/val",
-        "results/cctv_day_vit/train",
-        "results/cctv_day_vit/val",
-        "results/cctv_night_vit/train",
-        "results/cctv_night_vit/val",
-        "results/tod_day_vit/train",
-        "results/tod_day_vit/val",
-        "results/tod_night_vit/train",
-        "results/tod_night_vit/val",
-    ]
-    
-    # 설정: ViT 분류 결과 저장 CSV 파일
-    output_csv = "results/pipeline/classification_results.csv"
-    
-    # 설정: 성능 척도 및 그래프 저장 디렉토리
-    performance_metrics_dir = "results/pipeline/performance_metrics"
     
     # 디바이스 설정: GPU 사용 가능 시 GPU 사용, 아니면 CPU
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -427,44 +428,67 @@ def main():
     else:
         print("[INFO] Using CPU for inference.")
     
-    # YOLO 모델 로드 (학습된 가중치 사용)
-    print("[INFO] Loading fine-tuned YOLO model...")
-    yolo_model = YOLO(trained_weights_path).to(device)
-    print("[INFO] YOLO model loaded.")
-    
-    # 모든 원본 이미지 디렉토리에 대해 객체 감지 및 패칭 수행
-    print("[INFO] Starting object detection and cropping with YOLO...")
-    for src_dir, crop_dir in zip(source_directories, cropped_directories):
-        print(f"[INFO] Processing directory: {src_dir}")
-        batch_detect_and_crop(yolo_model, src_dir, crop_dir, min_size=10, device=device)
-    print("[INFO] Object detection and cropping completed.")
-    
-    # ViT 모델 로드
+    # ViT 모델 로드 (한 번만 로드)
     print("[INFO] Loading ViT model...")
     vit_model, vit_feature_extractor = load_vit_model(device=device)
     print("[INFO] ViT model loaded.")
     
-    # ViT를 사용한 분류 수행
-    print("[INFO] Starting classification with ViT...")
-    y_true_all = []
-    y_pred_all = []
-    
-    for crop_dir in cropped_directories:
-        if not os.path.exists(crop_dir):
-            print(f"[WARNING] Cropped directory does not exist: {crop_dir}")
+    # 각 데이터셋별로 처리
+    for dataset in datasets:
+        name = dataset["name"]
+        yolo_weights_path = dataset["yolo_weights_path"]
+        splits = dataset["splits"]
+        source_base_dir = dataset["source_base_dir"]
+        cropped_base_dir = dataset["cropped_base_dir"]
+        classification_results_dir = dataset["classification_results_dir"]
+        
+        print(f"\n[INFO] Processing dataset: {name}")
+        
+        # YOLO 모델 로드 (각 데이터셋별로 별도의 모델 로드)
+        if not os.path.exists(yolo_weights_path):
+            print(f"[ERROR] YOLO weights not found for dataset '{name}': {yolo_weights_path}")
             continue
-        print(f"[INFO] Classifying images in directory: {crop_dir}")
-        y_true, y_pred = batch_classify_vit(vit_model, vit_feature_extractor, crop_dir, output_csv, device=device)
-        y_true_all.extend(y_true)
-        y_pred_all.extend(y_pred)
+        
+        print(f"[INFO] Loading YOLO model from: {yolo_weights_path}")
+        yolo_model = YOLO(yolo_weights_path).to(device)
+        print("[INFO] YOLO model loaded.")
+        
+        # 각 분할(train, val)에 대해 객체 감지 및 패칭 수행
+        for split in splits:
+            print(f"\n[INFO] Processing split: {split}")
+            source_dir = os.path.join(source_base_dir, split)
+            cropped_dir = os.path.join(cropped_base_dir, split)
+            
+            if not os.path.exists(source_dir):
+                print(f"[WARNING] Source directory does not exist: {source_dir}")
+                continue
+            
+            print(f"[INFO] Detecting and cropping objects in: {source_dir}")
+            batch_detect_and_crop(yolo_model, source_dir, cropped_dir, min_size=10, device=device)
+            print(f"[INFO] Object detection and cropping completed for: {source_dir}")
+        
+        # 분류 및 성능 평가
+        for split in splits:
+            print(f"\n[INFO] Classifying cropped images for split: {split}")
+            cropped_dir = os.path.join(cropped_base_dir, split)
+            output_csv = os.path.join(classification_results_dir, f"{split}_classification_results.csv")
+            performance_metrics_dir = os.path.join(classification_results_dir, "performance_metrics", split)
+            
+            if not os.path.exists(cropped_dir):
+                print(f"[WARNING] Cropped directory does not exist: {cropped_dir}")
+                continue
+            
+            print(f"[INFO] Classifying images in: {cropped_dir}")
+            y_true, y_pred = batch_classify_vit(vit_model, vit_feature_extractor, cropped_dir, output_csv, device=device)
+            print(f"[INFO] Classification completed for split: {split}")
+            
+            # 성능 척도 및 그래프 생성
+            print(f"[INFO] Generating performance metrics for split: {split}")
+            classes = sorted(list(set(y_true)))  # 실제 클래스 목록 정렬
+            plot_all_metrics(y_true, y_pred, classes, performance_metrics_dir)
+            print(f"[INFO] Performance metrics generation completed for split: {split}")
     
-    print("[INFO] Classification with ViT completed.")
-    
-    # 성능 척도 및 그래프 생성
-    print("[INFO] Starting performance metrics calculation and plotting...")
-    classes = sorted(list(set(y_true_all)))  # 실제 클래스 목록 정렬
-    plot_all_metrics(y_true_all, y_pred_all, classes, performance_metrics_dir)
-    print("[INFO] Performance metrics calculation and plotting completed.")
+    print("\n[INFO] All datasets processed successfully.")
 
 if __name__ == "__main__":
     main()
