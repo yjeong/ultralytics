@@ -45,7 +45,7 @@ def ensure_10class_folders(data_dir, num_classes=10, min_size=(10, 10)):
 def train_classification_head(
     data_dir,
     pretrained_weights="yolo11x-cls.pt",
-    epochs=1,
+    epochs=10,
     batch_size=16,
     img_size=224,
     lr=1e-4,
@@ -135,7 +135,7 @@ if __name__ == "__main__":
         train_classification_head(
             data_dir=folder_path,
             pretrained_weights="yolo11x-cls.pt",
-            epochs=1,
+            epochs=10,
             batch_size=16,
             img_size=224,
             lr=1e-4,
