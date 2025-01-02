@@ -79,6 +79,10 @@ def batch_classify_vit(model, feature_extractor, crop_dir, output_csv, device='c
     - y_pred: 예측 클래스 리스트
     """
     class_folders = [f for f in os.listdir(crop_dir) if os.path.isdir(os.path.join(crop_dir, f))]
+    if not class_folders:
+        print(f"[WARNING] No cropped images found in directory: {crop_dir}")
+        return [], []
+
     results = []
     y_true = []
     y_pred = []
@@ -111,7 +115,6 @@ def batch_classify_vit(model, feature_extractor, crop_dir, output_csv, device='c
             writer.writerow(row)
     
     print(f"[INFO] Classification results saved to {output_csv}")
-    
     return y_true, y_pred
 
 def plot_confusion_matrix(y_true, y_pred, classes, output_path, normalize=False):
@@ -276,7 +279,13 @@ def plot_classification_report(y_true, y_pred, classes, output_path):
 def plot_all_metrics(y_true, y_pred, classes, output_dir):
     """
     모든 성능 척도를 계산하고 시각화합니다.
+    """
+
+    if not classes:
+        print(f"[ERROR] No valid classes detected. Skipping metrics generation.")
+        return
     
+    """
     Parameters:
     - y_true: 실제 클래스 리스트
     - y_pred: 예측 클래스 리스트
@@ -334,6 +343,11 @@ def detect_and_crop_objects(yolo_model, image_path, output_dir, min_size=10, dev
     
     # YOLO 모델의 predict 메서드 사용
     results = yolo_model.predict(source=image_path, conf=0.25, device=device)
+
+    #감지된 객체 처리
+    if not results or not results[0].boxes:
+        print(f"[WARNING] No detections in image: {image_path}")
+        return []
     
     cropped_image_paths = []
     for result in results:
