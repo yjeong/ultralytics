@@ -190,8 +190,8 @@ if __name__ == "__main__":
         "Aircraft",
         "Rotary-wing",
         "Drone",
-        "Vehicle",
-        "Standard buoy"
+        "Standard buoy",
+        "Vehicle"
     ]
 
     # 여러 디렉토리 반복 처리

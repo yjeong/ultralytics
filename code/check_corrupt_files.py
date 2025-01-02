@@ -49,28 +49,36 @@ def check_labels(label_dirs):
                     corrupt_labels.append(lbl_path)
     return corrupt_labels
 
+def delete_files(file_list, file_type="파일"):
+    for file in file_list:
+        try:
+            os.remove(file)
+            print(f"삭제 완료: {file}")
+        except Exception as e:
+            print(f"{file_type} 삭제 실패: {file} - 오류: {e}")
+
 def main():
     image_dirs = [
-        'ultralytics/examples/datasets/testset/cctv_day/images/train',
-        'ultralytics/examples/datasets/testset/cctv_day/images/val',
-        'ultralytics/examples/datasets/testset/cctv_night/images/train',
-        'ultralytics/examples/datasets/testset/cctv_night/images/val',
-        'ultralytics/examples/datasets/testset/tod_day/images/train',
-        'ultralytics/examples/datasets/testset/tod_day/images/val',
-        'ultralytics/examples/datasets/testset/tod_night/images/train',
-        'ultralytics/examples/datasets/testset/tod_night/images/val',
-        'ultralytics/examples/datasets/testset/army_add/cctv_day/images'
+        'datasets/testset/cctv_day/images/train',
+        'datasets/testset/cctv_day/images/val',
+        'datasets/testset/cctv_night/images/train',
+        'datasets/testset/cctv_night/images/val',
+        'datasets/testset/tod_day/images/train',
+        'datasets/testset/tod_day/images/val',
+        'datasets/testset/tod_night/images/train',
+        'datasets/testset/tod_night/images/val',
+        'datasets/testset/army_add/cctv_day/images'
     ]
 
     label_dirs = [
-        'ultralytics/examples/datasets/testset/cctv_day/labels/train',
-        'ultralytics/examples/datasets/testset/cctv_day/labels/val',
-        'ultralytics/examples/datasets/testset/cctv_night/labels/train',
-        'ultralytics/examples/datasets/testset/cctv_night/labels/val',
-        'ultralytics/examples/datasets/testset/tod_day/labels/train',
-        'ultralytics/examples/datasets/testset/tod_day/labels/val',
-        'ultralytics/examples/datasets/testset/tod_night/labels/train',
-        'ultralytics/examples/datasets/testset/tod_night/labels/val'
+        'datasets/testset/cctv_day/labels/train',
+        'datasets/testset/cctv_day/labels/val',
+        'datasets/testset/cctv_night/labels/train',
+        'datasets/testset/cctv_night/labels/val',
+        'datasets/testset/tod_day/labels/train',
+        'datasets/testset/tod_day/labels/val',
+        'datasets/testset/tod_night/labels/train',
+        'datasets/testset/tod_night/labels/val'
     ]
 
     print("이미지 파일 검증 중...")
@@ -81,12 +89,14 @@ def main():
     corrupt_labels = check_labels(label_dirs)
     print(f"\n총 손상된 라벨 파일: {len(corrupt_labels)}")
 
-    # 손상된 파일을 삭제하려면 아래 주석을 해제하세요
-    #for img in corrupt_images:
-    #    os.remove(img)
-    #for lbl in corrupt_labels:
-    #    os.remove(lbl)
+    # 손상된 파일 삭제
+    if corrupt_images:
+        print("\n손상된 이미지 파일 삭제 중...")
+        delete_files(corrupt_images, file_type="이미지")
+
+    if corrupt_labels:
+        print("\n손상된 라벨 파일 삭제 중...")
+        delete_files(corrupt_labels, file_type="라벨")
 
 if __name__ == "__main__":
     main()
-

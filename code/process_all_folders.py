@@ -1,3 +1,5 @@
+#testset 하위폴더에서 실행.
+
 import os
 import shutil
 import random
@@ -133,7 +135,7 @@ def main():
 
     # 처리할 폴더 목록 (Army 하위의 다섯 개 폴더)
     target_folders = [
-        'army_add',
+        'army_add/cctv_day'
         'cctv_day',
         'cctv_night',
         'tod_day',
