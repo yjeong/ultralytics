@@ -28,7 +28,7 @@ def ensure_10class_folders(data_dir, num_classes=10):
 def train_classification_head(
     data_dir,
     pretrained_weights="yolo11x-cls.pt",
-    epochs=30,
+    epochs=3,
     batch_size=16,
     img_size=224,
     lr=1e-4,
@@ -142,9 +142,9 @@ def train_classification_head(
 if __name__ == "__main__":
     data_dirs = [
         ("datasets/testset/cctv_day_cls", "cctv_day_exp"),
-        ("datasets/testset/cctv_night_cls", "cctv_night_exp"),
-        ("datasets/testset/tod_day_cls", "tod_day_exp"),
-        ("datasets/testset/tod_night_cls", "tod_night_exp")
+        #("datasets/testset/cctv_night_cls", "cctv_night_exp"),
+        ("datasets/testset/tod_day_cls", "tod_day_exp")
+        #("datasets/testset/tod_night_cls", "tod_night_exp")
     ]
 
     for folder_path, exp_name in data_dirs:
@@ -152,7 +152,7 @@ if __name__ == "__main__":
         train_classification_head(
             data_dir=folder_path,
             pretrained_weights="yolo11x-cls.pt",
-            epochs=30,
+            epochs=3,
             batch_size=16,
             img_size=224,
             lr=1e-4,

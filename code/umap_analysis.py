@@ -21,7 +21,7 @@ yaml_files = [
     '/mnt/nas4/jyh/ultralytics/code/work_cd.yaml',
     '/mnt/nas4/jyh/ultralytics/code/work_cn.yaml',
     '/mnt/nas4/jyh/ultralytics/code/work_td.yaml',
-    '/mnt/nas4/jyh/ultralytics/code/work_tn.yaml'  # work_te.yaml로 가정
+    '/mnt/nas4/jyh/ultralytics/code/work_tn.yaml'
 ]
 
 # 결과를 저장할 디렉토리 생성
