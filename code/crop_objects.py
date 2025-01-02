@@ -83,8 +83,12 @@ def crop_and_save_objects(
         H, W, _ = img.shape
 
         # 라벨(.txt) 읽기
-        with open(label_path, 'r') as f:
-            lines = f.readlines()
+        try:
+            with open(label_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+        except UnicodeDecodeError as e:
+            print(f"[WARNING] Skipping {label_path} due to decoding error: {e}")
+            continue
 
         for i, line in enumerate(lines):
             line = line.strip()
@@ -186,15 +190,15 @@ if __name__ == "__main__":
         "Aircraft",
         "Rotary-wing",
         "Drone",
-        "Standard buoy",
-        "Vehicle"
+        "Vehicle",
+        "Standard buoy"
     ]
 
     # 여러 디렉토리 반복 처리
     jobs = [
         {
-            "src": "datasets/testset/army_add/cctv_day",
-            "dst": "datasets/testset/army_add/cctv_day_cls"
+            "src": "datasets/testset/cctv_day",
+            "dst": "datasets/testset/cctv_day_cls"
         },
         {
             "src": "datasets/testset/cctv_night",
