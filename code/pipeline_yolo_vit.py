@@ -342,9 +342,9 @@ def detect_and_crop_objects(yolo_model, image_path, output_dir, min_size=10, dev
         return []
     
     # YOLO 모델의 predict 메서드 사용
-    results = yolo_model.predict(source=image_path, conf=0.25, device=device)
+    results = yolo_model.predict(source=image_path, conf=0.01, device=device)
 
-    #감지된 객체 처리
+    # 감지된 객체 처리
     if not results or not results[0].boxes:
         print(f"[WARNING] No detections in image: {image_path}")
         return []
@@ -353,11 +353,8 @@ def detect_and_crop_objects(yolo_model, image_path, output_dir, min_size=10, dev
     for result in results:
         for box in result.boxes:
             class_idx = int(box.cls)
-            xc, yc, bw, bh = box.xywh[0]
-            x1 = int((xc - bw / 2) * img.shape[1])
-            y1 = int((yc - bh / 2) * img.shape[0])
-            x2 = int((xc + bw / 2) * img.shape[1])
-            y2 = int((yc + bh / 2) * img.shape[0])
+            # box.xyxy는 [x1, y1, x2, y2]의 절대 픽셀 좌표
+            x1, y1, x2, y2 = box.xyxy[0].tolist()
             
             # 유효성 검사
             if x2 <= x1 or y2 <= y1:
@@ -365,17 +362,35 @@ def detect_and_crop_objects(yolo_model, image_path, output_dir, min_size=10, dev
             if (x2 - x1) < min_size or (y2 - y1) < min_size:
                 continue
             
+            # 이미지 경계를 벗어나지 않도록 클리핑
+            x1 = max(0, int(x1))
+            y1 = max(0, int(y1))
+            x2 = min(img.shape[1], int(x2))
+            y2 = min(img.shape[0], int(y2))
+            
             cropped = img[y1:y2, x1:x2]
             # 저장 파일명: 원본명_객체번호.jpg
             base_name = os.path.splitext(os.path.basename(image_path))[0]
-            cropped_filename = f"{base_name}_{box.id}.jpg"
+            # box.id가 없는 경우, 고유한 식별자로 대체
+            if hasattr(box, 'id'):
+                cropped_filename = f"{base_name}_{box.id}.jpg"
+            else:
+                # 임시로 무작위 숫자를 추가
+                import uuid
+                cropped_filename = f"{base_name}_{uuid.uuid4().hex[:8]}.jpg"
             cropped_path = os.path.join(output_dir, cropped_filename)
             cv2.imwrite(cropped_path, cropped)
             cropped_image_paths.append(cropped_path)
+            
+            # 디버깅을 위한 로그 출력
+            print(f"Detected box: x1={x1}, y1={y1}, x2={x2}, y2={y2}, class={class_idx}, confidence={box.conf}")
+    
+    if not cropped_image_paths:
+        print(f"[WARNING] No valid objects found in image: {image_path}")
     
     return cropped_image_paths
 
-def batch_detect_and_crop(yolo_model, src_image_dir, dst_crop_dir, min_size=10, device='cpu'):
+def batch_detect_and_crop(yolo_model, src_image_dir, dst_crop_dir, min_size=1, device='cpu'):
     """
     원본 이미지 디렉토리를 순회하며 객체를 감지하고 패칭하여 저장합니다.
     
@@ -403,7 +418,7 @@ def main():
     datasets = [
         {
             "name": "cctv_day",
-            "yolo_weights_path": "results/cls_head/cctv_day_exp/weights/best.pt",
+            "yolo_weights_path": "results/cls_head/cctv_day_exp4/weights/best.pt",
             "splits": ["train", "val"],
             "source_base_dir": "datasets/testset/cctv_day/images",
             "cropped_base_dir": "results/pipeline/cctv_day_ptc",
@@ -411,7 +426,7 @@ def main():
         },
         {
             "name": "cctv_night",
-            "yolo_weights_path": "results/cls_head/cctv_night_exp/weights/best.pt",
+            "yolo_weights_path": "results/cls_head/cctv_night_exp4/weights/best.pt",
             "splits": ["train", "val"],
             "source_base_dir": "datasets/testset/cctv_night/images",
             "cropped_base_dir": "results/pipeline/cctv_night_ptc",
@@ -419,7 +434,7 @@ def main():
         },
         {
             "name": "tod_day",
-            "yolo_weights_path": "results/cls_head/tod_day_exp/weights/best.pt",
+            "yolo_weights_path": "results/cls_head/tod_day_exp4/weights/best.pt",
             "splits": ["train", "val"],
             "source_base_dir": "datasets/testset/tod_day/images",
             "cropped_base_dir": "results/pipeline/tod_day_ptc",
@@ -427,7 +442,7 @@ def main():
         },
         {
             "name": "tod_night",
-            "yolo_weights_path": "results/cls_head/tod_night_exp/weights/best.pt",
+            "yolo_weights_path": "results/cls_head/tod_night_exp4/weights/best.pt",
             "splits": ["train", "val"],
             "source_base_dir": "datasets/testset/tod_night/images",
             "cropped_base_dir": "results/pipeline/tod_night_ptc",

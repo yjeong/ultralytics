@@ -20,4 +20,4 @@ val:
 nc: 10
 
 # 클래스 이름 리스트 (매핑된 순서대로)
-names: ['Civilian ship', 'Warship', 'Submarine', 'Inflatable boat', 'Person', 'Aircraft', 'Rotary-wing', 'Drone', 'Standard buoy', 'Vehicle']
+names: ['Civilian ship', 'Warship', 'Submarine', 'Inflatable boat', 'Person', 'Aircraft', 'Rotary-wing', 'Drone', 'Vehicle', 'Standard buoy']

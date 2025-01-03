@@ -37,7 +37,7 @@ def crop_and_save_objects(
     dst_base_dir, 
     split,
     class_names,
-    min_size=5
+    min_size=10  # 최소 픽셀 크기를 10으로 설정
 ):
     """
     이미지/라벨( YOLO 형식 )을 읽어, 객체를 Crop -> 클래스별 폴더에 저장.
@@ -158,7 +158,8 @@ def build_classification_dataset(
         src_label_dir=src_lbl_train,
         dst_base_dir=dst_root,
         split="train",
-        class_names=class_names
+        class_names=class_names,
+        min_size=10  # 최소 픽셀 크기 설정
     )
 
     # 3) val 세트 크롭
@@ -169,7 +170,8 @@ def build_classification_dataset(
         src_label_dir=src_lbl_val,
         dst_base_dir=dst_root,
         split="val",
-        class_names=class_names
+        class_names=class_names,
+        min_size=10  # 최소 픽셀 크기 설정
     )
 
     print(f"[INFO] Done building classification dataset from {src_root} -> {dst_root}")

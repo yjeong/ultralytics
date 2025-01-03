@@ -59,26 +59,26 @@ def delete_files(file_list, file_type="파일"):
 
 def main():
     image_dirs = [
-        'datasets/testset/cctv_day/images/train',
-        'datasets/testset/cctv_day/images/val',
-        'datasets/testset/cctv_night/images/train',
-        'datasets/testset/cctv_night/images/val',
-        'datasets/testset/tod_day/images/train',
-        'datasets/testset/tod_day/images/val',
-        'datasets/testset/tod_night/images/train',
-        'datasets/testset/tod_night/images/val',
-        'datasets/testset/army_add/cctv_day/images'
+        'datasets/testset_backup/cctv_day/images/train',
+        'datasets/testset_backup/cctv_day/images/val',
+        'datasets/testset_backup/cctv_night/images/train',
+        'datasets/testset_backup/cctv_night/images/val',
+        'datasets/testset_backup/tod_day/images/train',
+        'datasets/testset_backup/tod_day/images/val',
+        'datasets/testset_backup/tod_night/images/train',
+        'datasets/testset_backup/tod_night/images/val',
+        'datasets/testset_backup/army_add/cctv_day/images'
     ]
 
     label_dirs = [
-        'datasets/testset/cctv_day/labels/train',
-        'datasets/testset/cctv_day/labels/val',
-        'datasets/testset/cctv_night/labels/train',
-        'datasets/testset/cctv_night/labels/val',
-        'datasets/testset/tod_day/labels/train',
-        'datasets/testset/tod_day/labels/val',
-        'datasets/testset/tod_night/labels/train',
-        'datasets/testset/tod_night/labels/val'
+        'datasets/testset_backup/cctv_day/labels/train',
+        'datasets/testset_backup/cctv_day/labels/val',
+        'datasets/testset_backup/cctv_night/labels/train',
+        'datasets/testset_backup/cctv_night/labels/val',
+        'datasets/testset_backup/tod_day/labels/train',
+        'datasets/testset_backup/tod_day/labels/val',
+        'datasets/testset_backup/tod_night/labels/train',
+        'datasets/testset_backup/tod_night/labels/val'
     ]
 
     print("이미지 파일 검증 중...")
