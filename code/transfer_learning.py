@@ -48,8 +48,8 @@ def run_training(data_yaml, model_path, epochs, imgsz, freeze, batch, cache, pro
 def main():
     # 학습할 데이터셋 목록
     data_files = [
-        "code/work_cd.yaml",
-        "code/work_cn.yaml"
+        "xView.yaml",
+        "VisDrone.yaml"
     ]
     
     # 공통 학습 설정
@@ -57,13 +57,16 @@ def main():
     epochs = 100
     imgsz = 640
     freeze = 10
-    batch = 9
+    batch = 4
     cache = "True"
     project = "/mnt/nas4/jyh/ultralytics/results"
     device = 1
     
     # 각 데이터셋에 대해 고유한 이름 지정
-    names = ["frozen_transfer_cd", "frozen_transfer_cn"]
+    names = [
+        "xView",
+        "VisDrone"
+    ]
     
     # 하이퍼파라미터 설정
     hyperparams = {

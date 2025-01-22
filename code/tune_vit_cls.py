@@ -9,7 +9,6 @@ from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
-from pathlib import Path
 
 # ================================================
 # 설정 섹션
@@ -17,14 +16,14 @@ from pathlib import Path
 
 # 여러 모델 디렉토리 리스트
 MODEL_DIRECTORIES = [
-    "/mnt/nas4/jyh/ultralytics/results_vit/frozen_transfer_cn5",
-    "/mnt/nas4/jyh/ultralytics/results_vit/frozen_transfer_cd5"
+    "/mnt/nas4/jyh/ultralytics/ViT_VisDrone/VisDrone"
+    #"/mnt/nas4/jyh/ultralytics/results_vit/frozen_transfer_cd5"
 ]
 
 # ViT 모델 설정
-MODEL_VIT_NAME = "google/vit-large-patch16-224"  # 사용할 ViT 모델 이름 또는 경로
+MODEL_VIT_NAME = "google/vit-base-patch16-224"  # 사용할 ViT 모델 이름 또는 경로
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-BATCH_SIZE = 16  # 배치 크기 설정
+BATCH_SIZE = 4  # 배치 크기 설정
 NUM_EPOCHS = 5  # 미세 조정 에포크 수
 LEARNING_RATE = 5e-5  # 학습률
 
