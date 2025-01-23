@@ -14,14 +14,16 @@ from sklearn.model_selection import train_test_split
 # 설정 섹션
 # ================================================
 
+name = "african-wildlife"
+
 # 여러 모델 디렉토리 리스트
 MODEL_DIRECTORIES = [
-    "/mnt/nas4/jyh/ultralytics/ViT_VisDrone/VisDrone"
+    "/mnt/nas4/jyh/ultralytics/ViT_results/ViT_"+name+"/"+name
     #"/mnt/nas4/jyh/ultralytics/results_vit/frozen_transfer_cd5"
 ]
 
 # Swin Transformer 모델 설정
-MODEL_SWIN_NAME = "microsoft/swin-base-patch4-window7-224"  # 사용할 Swin Transformer 모델 이름 또는 경로
+MODEL_SWIN_NAME = "microsoft/swin-large-patch4-window7-224"  # 사용할 Swin Transformer 모델 이름 또는 경로
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE = 4  # 배치 크기 설정
 NUM_EPOCHS = 5  # 미세 조정 에포크 수

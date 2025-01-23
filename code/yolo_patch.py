@@ -12,7 +12,7 @@ import logging
 # 설정 섹션
 # ================================================
 
-name = "african-wildlife"
+name = "VOC"  # 데이터셋 이름
 
 MODELS_CONFIG = [
     {
@@ -21,7 +21,7 @@ MODELS_CONFIG = [
     }
 ]
 
-BASE_OUTPUT_DIR = "/mnt/nas4/jyh/ultralytics/ViT_"+name  # 기본 결과를 저장할 디렉토리 경로
+BASE_OUTPUT_DIR = "/mnt/nas4/jyh/ultralytics/ViT_results/ViT_"+name  # 기본 결과를 저장할 디렉토리 경로
 
 # 파라미터 설정
 MIN_IMAGE_SIZE = 10  # 처리할 최소 이미지 크기 (픽셀)
