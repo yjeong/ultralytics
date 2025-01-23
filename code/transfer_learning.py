@@ -48,8 +48,8 @@ def run_training(data_yaml, model_path, epochs, imgsz, freeze, batch, cache, pro
 def main():
     # 학습할 데이터셋 목록
     data_files = [
-        "xView.yaml",
-        "VisDrone.yaml"
+        "african-wildlife.yaml",
+        "GlobalWheat2020.yaml"
     ]
     
     # 공통 학습 설정
@@ -64,8 +64,8 @@ def main():
     
     # 각 데이터셋에 대해 고유한 이름 지정
     names = [
-        "xView",
-        "VisDrone"
+        "african-wildlife",
+        "GlobalWheat2020"
     ]
     
     # 하이퍼파라미터 설정

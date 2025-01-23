@@ -12,14 +12,16 @@ import logging
 # 설정 섹션
 # ================================================
 
+name = "african-wildlife"
+
 MODELS_CONFIG = [
     {
-        "model_path": "/mnt/nas4/jyh/ultralytics/results/VisDrone/weights/best.pt",
-        "data_yaml": "/mnt/nas4/jyh/ultralytics/ultralytics/cfg/datasets/VisDrone.yaml"
+        "model_path": "/mnt/nas4/jyh/ultralytics/results/"+name+"/weights/best.pt",
+        "data_yaml": "/mnt/nas4/jyh/ultralytics/ultralytics/cfg/datasets/"+name+".yaml"
     }
 ]
 
-BASE_OUTPUT_DIR = "/mnt/nas4/jyh/ultralytics/ViT_VisDrone"  # 기본 결과를 저장할 디렉토리 경로
+BASE_OUTPUT_DIR = "/mnt/nas4/jyh/ultralytics/ViT_"+name  # 기본 결과를 저장할 디렉토리 경로
 
 # 파라미터 설정
 MIN_IMAGE_SIZE = 10  # 처리할 최소 이미지 크기 (픽셀)
@@ -75,7 +77,7 @@ def main():
     # 사용자 정의: 데이터셋 루트 디렉토리 수동 설정
     # ================================================
     # 여기에 실제 데이터셋 루트 디렉토리를 설정하세요.
-    DATASET_ROOT = "/mnt/nas4/jyh/ultralytics/datasets/VisDrone"
+    DATASET_ROOT = "/mnt/nas4/jyh/ultralytics/datasets/"+name
 
     # ================================================
     # 각 모델별로 처리
@@ -84,7 +86,7 @@ def main():
         model_path = config["model_path"]
         data_yaml_path = config["data_yaml"]
 
-        # 모델 이름 추출 (예: VisDrone)
+        # 모델 이름 추출
         model_name = os.path.basename(os.path.dirname(os.path.dirname(model_path)))
         logging.info("=== 모델: %s ===", model_name)
 
