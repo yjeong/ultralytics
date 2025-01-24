@@ -1,235 +1,440 @@
-# analyze_vit_results.py
-
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import confusion_matrix, classification_report, ConfusionMatrixDisplay, roc_curve, auc, roc_auc_score
-from sklearn.preprocessing import label_binarize
+from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
 from PIL import Image
-import json
+from tqdm import tqdm
+import torch
+import glob
+from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+
+# 시각화 스타일 설정
+sns.set(style="whitegrid")
+plt.rcParams["figure.figsize"] = (12, 8)
 
 # ================================================
 # 설정 섹션
 # ================================================
 
-# 이미지 디렉토리 및 CSV 파일 경로 설정
-IMAGE_DIRECTORY = "/mnt/nas4/jyh/ultralytics/datasets/VisDrone/VisDrone2019-DET-test-challenge/images"
-METADATA_CSV = os.path.join(IMAGE_DIRECTORY, 'images_with_vit.csv')
+name = "VisDrone"
 
-# 출력 디렉토리 설정
-OUTPUT_DIR = "/mnt/nas4/jyh/ultralytics/results_vit_analyzer/"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+# 입력 디렉토리 설정 (사용자 수정)
+INPUT_DIR = f"/mnt/nas4/jyh/ultralytics/ViT_results/ViT_{name}/{name}"
 
-# ================================================
-# 데이터 로드 및 전처리
-# ================================================
+# 출력 디렉토리 설정 (사용자 수정)
+OUTPUT_DIR = f"/mnt/nas4/jyh/ultralytics/ViT_results/ViT_{name}/{name}/vit_plots"  # 예: "/home/user/ViT_plots"
 
-# CSV 파일 로드
-if not os.path.exists(METADATA_CSV):
-    raise FileNotFoundError(f"메타데이터 CSV 파일을 찾을 수 없습니다: {METADATA_CSV}")
+# vit_finetuned 디렉토리 경로
+VIT_FINETUNED_DIR = os.path.join(INPUT_DIR, "vit_finetuned")
 
-df = pd.read_csv(METADATA_CSV)
+# 로그 디렉토리 (TensorBoard 이벤트 파일이 저장된 곳)
+LOG_DIR = os.path.join(VIT_FINETUNED_DIR, "logs")  # 실제 로그 위치에 따라 수정
 
-# 'Unknown' 클래스를 제외하거나 별도로 처리할 수 있습니다.
-df = df[df['pred_class_vit'] != 'Unknown']
-
-# 전체 정확도 계산
-overall_accuracy = (df['label'] == df['pred_class_vit']).mean()
-print(f"전체 정확도: {overall_accuracy:.2f}")
-
-# 클래스 레이블 목록
-classes = sorted(df['label'].unique())
-print(f"클래스 목록: {classes}")
+# 패치 CSV 파일 경로
+PATCHES_CSV = os.path.join(INPUT_DIR, "patches_with_vit.csv")
 
 # ================================================
-# 혼동 행렬 생성 및 시각화
+# 함수 정의
 # ================================================
 
-# 혼동 행렬 계산
-cm = confusion_matrix(df['label'], df['pred_class_vit'], labels=classes)
-cm_df = pd.DataFrame(cm, index=classes, columns=classes)
+def ensure_output_dir(directory):
+    """
+    출력 디렉토리가 존재하지 않으면 생성합니다.
 
-# 혼동 행렬 히트맵 시각화
-plt.figure(figsize=(12, 10))
-sns.heatmap(cm_df, annot=True, fmt='d', cmap='Blues', cbar=False)
-plt.xlabel('Predicted Label')
-plt.ylabel('True Label')
-plt.title('Confusion Matrix')
-plt.tight_layout()
-plt.savefig(os.path.join(OUTPUT_DIR, 'confusion_matrix_heatmap.png'))
-plt.show()
-
-# ================================================
-# 클래스별 정확도 계산 및 시각화
-# ================================================
-
-# 클래스별 정확도 계산
-class_accuracy = df.groupby('label').apply(lambda x: (x['label'] == x['pred_class_vit']).mean()).sort_values(ascending=False)
-
-# 클래스별 정확도 막대 그래프 시각화
-plt.figure(figsize=(12, 6))
-sns.barplot(x=class_accuracy.index, y=class_accuracy.values, palette='viridis')
-plt.xlabel('Class')
-plt.ylabel('Accuracy')
-plt.title('Per-Class Accuracy')
-plt.ylim(0, 1)
-plt.xticks(rotation=45)
-plt.tight_layout()
-plt.savefig(os.path.join(OUTPUT_DIR, 'per_class_accuracy.png'))
-plt.show()
-
-# ================================================
-# 정밀도, 재현율, F1-Score 계산 및 출력
-# ================================================
-
-# 분류 보고서 생성
-report = classification_report(df['label'], df['pred_class_vit'], target_names=classes, digits=4)
-print("Classification Report:")
-print(report)
-
-# 분류 보고서를 텍스트 파일로 저장
-with open(os.path.join(OUTPUT_DIR, 'classification_report.txt'), 'w') as f:
-    f.write(report)
-
-# ================================================
-# 신뢰도 분포 히스토그램 생성
-# ================================================
-
-plt.figure(figsize=(8, 6))
-sns.histplot(df['confidence_vit'], bins=50, kde=True, color='skyblue')
-plt.xlabel('Confidence')
-plt.ylabel('Frequency')
-plt.title('Confidence Distribution')
-plt.tight_layout()
-plt.savefig(os.path.join(OUTPUT_DIR, 'confidence_distribution.png'))
-plt.show()
-
-# ================================================
-# ROC 곡선 및 AUC 계산 및 시각화 (다중 클래스)
-# ================================================
-
-# 레이블 이진화
-y_true = label_binarize(df['label'], classes=classes)
-y_pred = label_binarize(df['pred_class_vit'], classes=classes)
-n_classes = y_true.shape[1]
-
-# ROC AUC 계산
-roc_auc = dict()
-fpr = dict()
-tpr = dict()
-
-for i in range(n_classes):
-    fpr[i], tpr[i], _ = roc_curve(y_true[:, i], y_pred[:, i])
-    roc_auc[i] = auc(fpr[i], tpr[i])
-
-# ROC 곡선 시각화
-plt.figure(figsize=(12, 8))
-colors = sns.color_palette("hls", n_classes)
-for i, color in zip(range(n_classes), colors):
-    plt.plot(fpr[i], tpr[i], color=color, lw=2,
-             label='ROC curve of class {0} (area = {1:0.2f})'
-             ''.format(classes[i], roc_auc[i]))
-
-plt.plot([0, 1], [0, 1], 'k--', lw=2)
-plt.xlim([0.0, 1.0])
-plt.ylim([0.0, 1.05])
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title('Receiver Operating Characteristic (ROC) Curves')
-plt.legend(loc="lower right", fontsize='small')
-plt.tight_layout()
-plt.savefig(os.path.join(OUTPUT_DIR, 'roc_curves.png'))
-plt.show()
-
-# ================================================
-# 올바르게 예측된 이미지와 잘못 예측된 이미지 시각화
-# ================================================
-
-def plot_image_with_predictions(image_path, true_label, pred_label, confidence, save_path=None):
-    image = Image.open(image_path).convert("RGB")
-    plt.figure(figsize=(6, 6))
-    plt.imshow(image)
-    plt.axis('off')
-    plt.title(f"True: {true_label}\nPred: {pred_label} ({confidence:.2f})", fontsize=12)
-    if save_path:
-        plt.savefig(save_path)
-    plt.show()
-
-# 올바르게 예측된 상위 5개 이미지 시각화
-correct_predictions = df[df['label'] == df['pred_class_vit']].sample(n=5, random_state=42)
-for idx, row in correct_predictions.iterrows():
-    img_path = os.path.join(IMAGE_DIRECTORY, row['image_filename'])
-    save_path = os.path.join(OUTPUT_DIR, f'correct_prediction_{idx}.png')
-    plot_image_with_predictions(img_path, row['label'], row['pred_class_vit'], row['confidence_vit'], save_path)
-
-# 잘못 예측된 상위 5개 이미지 시각화
-incorrect_predictions = df[df['label'] != df['pred_class_vit']].sample(n=5, random_state=42)
-for idx, row in incorrect_predictions.iterrows():
-    img_path = os.path.join(IMAGE_DIRECTORY, row['image_filename'])
-    save_path = os.path.join(OUTPUT_DIR, f'incorrect_prediction_{idx}.png')
-    plot_image_with_predictions(img_path, row['label'], row['pred_class_vit'], row['confidence_vit'], save_path)
-
-# ================================================
-# 학습 곡선 (손실 및 정확도) 시각화
-# ================================================
-
-# Trainer 로그 파일 로드
-# 'logs' 폴더 내에 'trainer_state.json' 파일이 있다고 가정
-trainer_state_path = os.path.join("/mnt/nas4/jyh/ultralytics/results_vit/finetuned_model/logs", 'trainer_state.json')
-
-if os.path.exists(trainer_state_path):
-    with open(trainer_state_path, 'r') as f:
-        trainer_state = json.load(f)
-    
-    # 손실과 정확도 추출
-    training_history = trainer_state.get('log_history', [])
-    epochs = []
-    train_loss = []
-    eval_loss = []
-    eval_accuracy = []
-
-    for entry in training_history:
-        if 'epoch' in entry and 'loss' in entry:
-            epochs.append(entry['epoch'])
-            train_loss.append(entry['loss'])
-        if 'epoch' in entry and 'eval_loss' in entry:
-            eval_loss.append(entry['eval_loss'])
-        if 'epoch' in entry and 'eval_accuracy' in entry:
-            eval_accuracy.append(entry['eval_accuracy'])
-    
-    if epochs and train_loss and eval_loss and eval_accuracy:
-        # 손실 그래프 시각화
-        plt.figure(figsize=(12, 5))
-        
-        # 손실
-        plt.subplot(1, 2, 1)
-        plt.plot(epochs, train_loss, label='Train Loss')
-        plt.plot(epochs, eval_loss, label='Validation Loss')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.title('Loss Over Epochs')
-        plt.legend()
-        
-        # 정확도
-        plt.subplot(1, 2, 2)
-        plt.plot(epochs, eval_accuracy, label='Validation Accuracy')
-        plt.xlabel('Epoch')
-        plt.ylabel('Accuracy')
-        plt.title('Validation Accuracy Over Epochs')
-        plt.legend()
-        
-        plt.tight_layout()
-        plt.savefig(os.path.join(OUTPUT_DIR, 'training_curves.png'))
-        plt.show()
+    Parameters:
+        directory (str): 생성할 디렉토리 경로
+    """
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        print(f"출력 디렉토리를 생성했습니다: {directory}")
     else:
-        print("손실 및 정확도 데이터를 추출할 수 없습니다. Trainer 로그를 확인하세요.")
-else:
-    print(f"Trainer state 파일을 찾을 수 없습니다: {trainer_state_path}")
-    print("학습 곡선을 시각화하려면 Trainer의 로그 파일을 확인하세요.")
+        print(f"출력 디렉토리가 이미 존재합니다: {directory}")
+
+def plot_training_metrics(log_dir, output_path):
+    """
+    TensorBoard 이벤트 파일을 로드하여 훈련 및 검증 정확도와 손실을 시각화하고 저장합니다.
+
+    Parameters:
+        log_dir (str): 로그 디렉토리 경로
+        output_path (str): 저장할 이미지 파일 경로
+    """
+    # TensorBoard 이벤트 파일 찾기
+    event_files = glob.glob(os.path.join(log_dir, "events.out.tfevents.*"))
+    if not event_files:
+        print(f"TensorBoard 이벤트 파일을 찾을 수 없습니다: {log_dir}. 훈련 지표 그래프 생성을 생략합니다.")
+        return
+
+    # 가장 최근의 이벤트 파일 사용 (여러 개일 경우)
+    event_file = sorted(event_files)[-1]
+    print(f"가장 최근의 TensorBoard 이벤트 파일을 사용합니다: {event_file}")
+
+    # EventAccumulator를 사용하여 이벤트 파일 파싱
+    event_acc = EventAccumulator(event_file)
+    event_acc.Reload()
+
+    # 훈련 및 검증 지표 추출 (정확도와 손실)
+    # 실제 훈련 스크립트에서 사용된 태그 이름에 따라 조정 필요
+    available_tags = event_acc.Tags().get('scalars', [])
+    print(f"사용 가능한 스칼라 태그: {available_tags}")
+
+    # 예시로 'train_accuracy', 'eval_accuracy', 'train_loss', 'eval_loss' 태그를 가정
+    train_acc = []
+    train_acc_steps = []
+    if 'train_accuracy' in available_tags:
+        for scalar in event_acc.Scalars('train_accuracy'):
+            train_acc_steps.append(scalar.step)
+            train_acc.append(scalar.value)
+    else:
+        print("태그 'train_accuracy'가 존재하지 않습니다.")
+
+    eval_acc = []
+    eval_acc_steps = []
+    if 'eval_accuracy' in available_tags:
+        for scalar in event_acc.Scalars('eval_accuracy'):
+            eval_acc_steps.append(scalar.step)
+            eval_acc.append(scalar.value)
+    else:
+        print("태그 'eval_accuracy'가 존재하지 않습니다.")
+
+    train_loss = []
+    train_loss_steps = []
+    if 'train_loss' in available_tags:
+        for scalar in event_acc.Scalars('train_loss'):
+            train_loss_steps.append(scalar.step)
+            train_loss.append(scalar.value)
+    else:
+        print("태그 'train_loss'가 존재하지 않습니다.")
+
+    eval_loss = []
+    eval_loss_steps = []
+    if 'eval_loss' in available_tags:
+        for scalar in event_acc.Scalars('eval_loss'):
+            eval_loss_steps.append(scalar.step)
+            eval_loss.append(scalar.value)
+    else:
+        print("태그 'eval_loss'가 존재하지 않습니다.")
+
+    if not (train_acc or eval_acc or train_loss or eval_loss):
+        print("훈련 지표를 찾을 수 없습니다. 훈련 지표 그래프 생성을 생략합니다.")
+        return
+
+    # 정확도 그래프
+    plt.figure(figsize=(14, 6))
+
+    plt.subplot(1, 2, 1)
+    if train_acc:
+        plt.plot(train_acc_steps, train_acc, label='Train Accuracy')
+    if eval_acc:
+        plt.plot(eval_acc_steps, eval_acc, label='Validation Accuracy')
+    plt.xlabel('Step')
+    plt.ylabel('Accuracy')
+    plt.title('Training and Validation Accuracy')
+    plt.legend()
+
+    # 손실 그래프
+    plt.subplot(1, 2, 2)
+    if train_loss:
+        plt.plot(train_loss_steps, train_loss, label='Train Loss')
+    if eval_loss:
+        plt.plot(eval_loss_steps, eval_loss, label='Validation Loss')
+    plt.xlabel('Step')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation Loss')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.close()
+    print(f"훈련 및 검증 지표 그래프가 저장되었습니다: {output_path}")
+
+def plot_confusion_matrix(csv_path, class_names, output_path):
+    """
+    혼동 행렬을 생성하고 시각화하여 저장합니다.
+
+    Parameters:
+        csv_path (str): patches_with_vit.csv 파일 경로
+        class_names (list): 클래스 이름 리스트
+        output_path (str): 저장할 이미지 파일 경로
+    """
+    df = pd.read_csv(csv_path)
+
+    # 실제 레이블과 예측 레이블 추출
+    y_true = df['pred_class_yolo']
+    y_pred = df['pred_class_vit']
+
+    # 혼동 행렬 계산
+    cm = confusion_matrix(y_true, y_pred, labels=class_names)
+
+    # 시각화
+    plt.figure(figsize=(12, 10))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                xticklabels=class_names, yticklabels=class_names)
+    plt.xlabel('Predicted Label')
+    plt.ylabel('True Label')
+    plt.title('Confusion Matrix')
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.close()
+    print(f"혼동 행렬이 저장되었습니다: {output_path}")
+
+def plot_classification_report(csv_path, class_names, output_path):
+    """
+    각 클래스별 정밀도, 재현율, F1-점수를 시각화하여 저장합니다.
+
+    Parameters:
+        csv_path (str): patches_with_vit.csv 파일 경로
+        class_names (list): 클래스 이름 리스트
+        output_path (str): 저장할 이미지 파일 경로
+    """
+    df = pd.read_csv(csv_path)
+
+    y_true = df['pred_class_yolo']
+    y_pred = df['pred_class_vit']
+
+    report = classification_report(y_true, y_pred, labels=class_names, output_dict=True)
+    report_df = pd.DataFrame(report).transpose().reset_index()
+    report_df = report_df[report_df['index'].isin(class_names)]
+
+    # 시각화
+    plt.figure(figsize=(14, 8))
+    width = 0.2
+    x = range(len(class_names))
+
+    plt.bar([p - width for p in x], report_df['precision'], width=width, label='Precision', color='skyblue')
+    plt.bar(x, report_df['recall'], width=width, label='Recall', color='lightgreen')
+    plt.bar([p + width for p in x], report_df['f1-score'], width=width, label='F1-Score', color='salmon')
+
+    plt.xlabel('Classes')
+    plt.ylabel('Scores')
+    plt.title('Precision, Recall, F1-Score per Class')
+    plt.xticks(x, class_names, rotation=45)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.close()
+    print(f"정밀도, 재현율, F1-점수 그래프가 저장되었습니다: {output_path}")
+
+def plot_confidence_distribution(csv_path, output_path):
+    """
+    올바른 예측과 오분류된 예측의 신뢰도 분포를 시각화하여 저장합니다.
+
+    Parameters:
+        csv_path (str): patches_with_vit.csv 파일 경로
+        output_path (str): 저장할 이미지 파일 경로
+    """
+    df = pd.read_csv(csv_path)
+
+    correct = df['pred_class_vit'] == df['pred_class_yolo']
+    incorrect = ~correct
+
+    plt.figure(figsize=(12, 6))
+    sns.histplot(df[correct]['confidence_vit'], color='green', label='Correct', kde=True, stat="density", bins=30, alpha=0.6)
+    sns.histplot(df[incorrect]['confidence_vit'], color='red', label='Incorrect', kde=True, stat="density", bins=30, alpha=0.6)
+    plt.xlabel('Confidence Score')
+    plt.ylabel('Density')
+    plt.title('Confidence Score Distribution')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.close()
+    print(f"예측 신뢰도 분포 그래프가 저장되었습니다: {output_path}")
+
+def visualize_sample_predictions(csv_path, output_path, num_samples=5):
+    """
+    올바르게 분류된 샘플과 오분류된 샘플의 이미지를 시각화하여 저장합니다.
+
+    Parameters:
+        csv_path (str): patches_with_vit.csv 파일 경로
+        output_path (str): 저장할 이미지 파일 경로
+        num_samples (int): 각 카테고리별 샘플 수
+    """
+    df = pd.read_csv(csv_path)
+
+    correct_df = df[df['pred_class_vit'] == df['pred_class_yolo']]
+    incorrect_df = df[df['pred_class_vit'] != df['pred_class_yolo']]
+
+    # 샘플 수 조정
+    num_correct = min(num_samples, len(correct_df))
+    num_incorrect = min(num_samples, len(incorrect_df))
+
+    correct = correct_df.sample(n=num_correct, random_state=42) if num_correct > 0 else pd.DataFrame()
+    incorrect = incorrect_df.sample(n=num_incorrect, random_state=42) if num_incorrect > 0 else pd.DataFrame()
+
+    max_samples = max(num_correct, num_incorrect)
+
+    if max_samples == 0:
+        print("시각화할 샘플이 없습니다.")
+        return
+
+    fig, axes = plt.subplots(2, max_samples, figsize=(20, 8))
+
+    # 올바른 예측 시각화
+    for i in range(max_samples):
+        if i < num_correct:
+            row = correct.iloc[i]
+            try:
+                img = Image.open(row['patch_path']).convert("RGB")
+                axes[0, i].imshow(img)
+                axes[0, i].set_title(f"True: {row['pred_class_yolo']}\nPred: {row['pred_class_vit']}")
+            except Exception as e:
+                print(f"이미지 로딩 오류: {row['patch_path']}. 오류: {e}")
+                axes[0, i].text(0.5, 0.5, 'Image Error', horizontalalignment='center', verticalalignment='center')
+            axes[0, i].axis('off')
+        else:
+            axes[0, i].axis('off')
+
+    # 오분류된 예측 시각화
+    for i in range(max_samples):
+        if i < num_incorrect:
+            row = incorrect.iloc[i]
+            try:
+                img = Image.open(row['patch_path']).convert("RGB")
+                axes[1, i].imshow(img)
+                axes[1, i].set_title(f"True: {row['pred_class_yolo']}\nPred: {row['pred_class_vit']}")
+            except Exception as e:
+                print(f"이미지 로딩 오류: {row['patch_path']}. 오류: {e}")
+                axes[1, i].text(0.5, 0.5, 'Image Error', horizontalalignment='center', verticalalignment='center')
+            axes[1, i].axis('off')
+        else:
+            axes[1, i].axis('off')
+
+    # 레이블 설정
+    if max_samples > 0:
+        axes[0, 0].set_ylabel('Correct', fontsize=12)
+        axes[1, 0].set_ylabel('Incorrect', fontsize=12)
+
+    plt.suptitle('Sample Predictions', fontsize=16)
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.close()
+    print(f"샘플 예측 결과 시각화가 저장되었습니다: {output_path}")
+
+def plot_class_distribution(csv_path, output_path):
+    """
+    데이터셋 내 각 클래스의 샘플 수를 시각화하여 클래스 불균형 여부를 파악하고 저장합니다.
+
+    Parameters:
+        csv_path (str): patches_with_vit.csv 파일 경로
+        output_path (str): 저장할 이미지 파일 경로
+    """
+    df = pd.read_csv(csv_path)
+
+    plt.figure(figsize=(14, 7))
+    sns.countplot(x='pred_class_yolo', data=df, order=sorted(df['pred_class_yolo'].unique()))
+    plt.xlabel('Class')
+    plt.ylabel('Number of Samples')
+    plt.title('Class Distribution in Dataset')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.close()
+    print(f"클래스 분포 그래프가 저장되었습니다: {output_path}")
+
+def plot_confidence_boxplot(csv_path, output_path):
+    """
+    각 클래스별 예측 신뢰도의 분포를 박스 플롯으로 시각화하여 저장합니다.
+
+    Parameters:
+        csv_path (str): patches_with_vit.csv 파일 경로
+        output_path (str): 저장할 이미지 파일 경로
+    """
+    df = pd.read_csv(csv_path)
+
+    plt.figure(figsize=(16, 10))
+    sns.boxplot(x='pred_class_vit', y='confidence_vit', data=df, order=sorted(df['pred_class_vit'].unique()))
+    plt.xlabel('Predicted Class')
+    plt.ylabel('Confidence Score')
+    plt.title('Confidence Scores per Predicted Class')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.close()
+    print(f"클래스별 신뢰도 박스 플롯이 저장되었습니다: {output_path}")
+
+def plot_checkpoint_performance(output_path):
+    """
+    체크포인트 별 성능 비교 기능을 제거합니다.
+
+    Parameters:
+        output_path (str): 저장할 이미지 파일 경로
+    """
+    print("체크포인트 별 성능 비교 기능이 제거되었습니다.")
 
 # ================================================
-# 스크립트 종료 메시지
+# 메인 함수 실행
 # ================================================
 
-print(f"\n모든 분석 결과가 {OUTPUT_DIR} 디렉토리에 저장되었습니다.")
+def run_all_plots(input_dir, output_dir, vit_finetuned_dir, patches_csv, log_dir, device):
+    """
+    모든 분석 및 시각화를 실행하는 함수입니다.
+
+    Parameters:
+        input_dir (str): 입력 디렉토리 경로
+        output_dir (str): 출력 디렉토리 경로
+        vit_finetuned_dir (str): vit_finetuned 디렉토리 경로
+        patches_csv (str): patches_with_vit.csv 파일 경로
+        log_dir (str): 로그 디렉토리 경로
+        device (torch.device): 연산 디바이스
+    """
+    ensure_output_dir(output_dir)
+
+    if not os.path.exists(patches_csv):
+        print(f"CSV 파일을 찾을 수 없습니다: {patches_csv}. 모든 플롯을 생성할 수 없습니다.")
+        return
+
+    df = pd.read_csv(patches_csv)
+    class_names = sorted(df['pred_class_yolo'].unique())
+
+    # 1. 훈련 및 검증 지표의 변화 추이
+    training_metrics_path = os.path.join(output_dir, "training_validation_metrics.png")
+    print("1. 훈련 및 검증 지표의 변화 추이")
+    plot_training_metrics(log_dir, training_metrics_path)
+
+    # 2. 혼동 행렬
+    confusion_matrix_path = os.path.join(output_dir, "confusion_matrix.png")
+    print("2. 혼동 행렬")
+    plot_confusion_matrix(patches_csv, class_names, confusion_matrix_path)
+
+    # 3. 정밀도, 재현율, F1-점수
+    classification_report_path = os.path.join(output_dir, "classification_report.png")
+    print("3. 정밀도, 재현율, F1-점수")
+    plot_classification_report(patches_csv, class_names, classification_report_path)
+
+    # 4. 예측 신뢰도 분포
+    confidence_distribution_path = os.path.join(output_dir, "confidence_distribution.png")
+    print("4. 예측 신뢰도 분포")
+    plot_confidence_distribution(patches_csv, confidence_distribution_path)
+
+    # 5. 체크포인트 별 성능 비교 (제거)
+    checkpoint_performance_path = os.path.join(output_dir, "checkpoint_performance.png")
+    print("5. 체크포인트 별 성능 비교 (제거)")
+    plot_checkpoint_performance(checkpoint_performance_path)
+
+    # 6. 샘플 예측 결과 시각화
+    sample_predictions_path = os.path.join(output_dir, "sample_predictions.png")
+    print("6. 샘플 예측 결과 시각화")
+    visualize_sample_predictions(patches_csv, sample_predictions_path, num_samples=5)
+
+    # 7. 클래스 불균형 분석
+    class_distribution_path = os.path.join(output_dir, "class_distribution.png")
+    print("7. 클래스 불균형 분석")
+    plot_class_distribution(patches_csv, class_distribution_path)
+
+    # 8. 클래스별 신뢰도 박스 플롯
+    confidence_boxplot_path = os.path.join(output_dir, "confidence_boxplot.png")
+    print("8. 클래스별 신뢰도 박스 플롯")
+    plot_confidence_boxplot(patches_csv, confidence_boxplot_path)
+
+    print("\n모든 그래프가 성공적으로 생성되고 저장되었습니다.")
+
+if __name__ == "__main__":
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    run_all_plots(
+        input_dir=INPUT_DIR,
+        output_dir=OUTPUT_DIR,
+        vit_finetuned_dir=VIT_FINETUNED_DIR,
+        patches_csv=PATCHES_CSV,
+        log_dir=LOG_DIR,
+        device=device
+    )
