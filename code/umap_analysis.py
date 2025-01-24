@@ -16,8 +16,8 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 # 절대 경로 설정
 base_dirs = [
-    '/mnt/nas4/jyh/ultralytics/datasets/coco8_1',
-    '/mnt/nas4/jyh/ultralytics/datasets/coco8_2'
+    '/mnt/nas4/jyh/ultralytics/datasets/coco8/images',
+    #'/mnt/nas4/jyh/ultralytics/datasets/coco8_2'
 ]
 
 output_dir = '/mnt/nas4/jyh/ultralytics/results/umap'

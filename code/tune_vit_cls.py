@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 # 설정 섹션
 # ================================================
 
-name = "african-wildlife"
+name = "VisDrone"
 
 # 여러 모델 디렉토리 리스트
 MODEL_DIRECTORIES = [
