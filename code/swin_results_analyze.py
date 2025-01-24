@@ -18,22 +18,22 @@ plt.rcParams["figure.figsize"] = (12, 8)
 # 설정 섹션
 # ================================================
 
-name = "african-wildlife"
+name = "VOC"
 
 # 입력 디렉토리 설정 (사용자 수정)
 INPUT_DIR = f"/mnt/nas4/jyh/ultralytics/ViT_results/ViT_{name}/{name}"
 
 # 출력 디렉토리 설정 (사용자 수정)
-OUTPUT_DIR = f"/mnt/nas4/jyh/ultralytics/ViT_results/ViT_{name}/{name}/vit_plots"  # 예: "/home/user/ViT_plots"
+OUTPUT_DIR = f"/mnt/nas4/jyh/ultralytics/ViT_results/ViT_{name}/{name}/swin_plots"  # 예: "/home/user/ViT_plots"
 
-# vit_finetuned 디렉토리 경로
-VIT_FINETUNED_DIR = os.path.join(INPUT_DIR, "vit_finetuned")
+# swin_finetuned 디렉토리 경로
+VIT_FINETUNED_DIR = os.path.join(INPUT_DIR, "swin_finetuned")
 
 # 로그 디렉토리 (TensorBoard 이벤트 파일이 저장된 곳)
 LOG_DIR = os.path.join(VIT_FINETUNED_DIR, "logs")  # 실제 로그 위치에 따라 수정
 
 # 패치 CSV 파일 경로
-PATCHES_CSV = os.path.join(INPUT_DIR, "patches_with_vit.csv")
+PATCHES_CSV = os.path.join(INPUT_DIR, "patches_with_swin.csv")
 
 # ================================================
 # 함수 정의
@@ -140,7 +140,7 @@ def plot_confusion_matrix(csv_path, class_names, output_path):
     """
     df = pd.read_csv(csv_path)
     y_true = df['pred_class_yolo']
-    y_pred = df['pred_class_vit']
+    y_pred = df['pred_class_swin']
 
     cm = confusion_matrix(y_true, y_pred, labels=class_names)
 
@@ -167,7 +167,7 @@ def plot_confusion_matrix_normalized(csv_path, class_names, output_path):
     """
     df = pd.read_csv(csv_path)
     y_true = df['pred_class_yolo']
-    y_pred = df['pred_class_vit']
+    y_pred = df['pred_class_swin']
 
     cm = confusion_matrix(y_true, y_pred, labels=class_names)
     cm_normalized = cm.astype('float') / cm.sum(axis=1, keepdims=True)
@@ -197,7 +197,7 @@ def plot_classification_report(csv_path, class_names, output_path):
     """
     df = pd.read_csv(csv_path)
     y_true = df['pred_class_yolo']
-    y_pred = df['pred_class_vit']
+    y_pred = df['pred_class_swin']
 
     report = classification_report(y_true, y_pred, labels=class_names, output_dict=True)
     report_df = pd.DataFrame(report).transpose().reset_index()
@@ -226,12 +226,12 @@ def plot_confidence_distribution(csv_path, output_path):
     올바른 예측과 오분류된 예측의 신뢰도 분포를 시각화하여 저장합니다.
     """
     df = pd.read_csv(csv_path)
-    correct = df['pred_class_vit'] == df['pred_class_yolo']
+    correct = df['pred_class_swin'] == df['pred_class_yolo']
     incorrect = ~correct
 
     plt.figure(figsize=(12, 6))
-    sns.histplot(df[correct]['confidence_vit'], color='green', label='Correct', kde=True, stat="density", bins=30, alpha=0.6)
-    sns.histplot(df[incorrect]['confidence_vit'], color='red', label='Incorrect', kde=True, stat="density", bins=30, alpha=0.6)
+    sns.histplot(df[correct]['confidence_swin'], color='green', label='Correct', kde=True, stat="density", bins=30, alpha=0.6)
+    sns.histplot(df[incorrect]['confidence_swin'], color='red', label='Incorrect', kde=True, stat="density", bins=30, alpha=0.6)
     plt.xlabel('Confidence Score')
     plt.ylabel('Density')
     plt.title('Confidence Score Distribution')
@@ -246,8 +246,8 @@ def visualize_sample_predictions(csv_path, output_path, num_samples=5):
     올바르게 분류된 샘플과 오분류된 샘플의 이미지를 시각화하여 저장합니다.
     """
     df = pd.read_csv(csv_path)
-    correct_df = df[df['pred_class_vit'] == df['pred_class_yolo']]
-    incorrect_df = df[df['pred_class_vit'] != df['pred_class_yolo']]
+    correct_df = df[df['pred_class_swin'] == df['pred_class_yolo']]
+    incorrect_df = df[df['pred_class_swin'] != df['pred_class_yolo']]
 
     num_correct = min(num_samples, len(correct_df))
     num_incorrect = min(num_samples, len(incorrect_df))
@@ -269,7 +269,7 @@ def visualize_sample_predictions(csv_path, output_path, num_samples=5):
             try:
                 img = Image.open(row['patch_path']).convert("RGB")
                 axes[0, i].imshow(img)
-                axes[0, i].set_title(f"True: {row['pred_class_yolo']}\nPred: {row['pred_class_vit']}")
+                axes[0, i].set_title(f"True: {row['pred_class_yolo']}\nPred: {row['pred_class_swin']}")
             except Exception as e:
                 print(f"이미지 로딩 오류: {row['patch_path']}. 오류: {e}")
                 axes[0, i].text(0.5, 0.5, 'Image Error', horizontalalignment='center', verticalalignment='center')
@@ -284,7 +284,7 @@ def visualize_sample_predictions(csv_path, output_path, num_samples=5):
             try:
                 img = Image.open(row['patch_path']).convert("RGB")
                 axes[1, i].imshow(img)
-                axes[1, i].set_title(f"True: {row['pred_class_yolo']}\nPred: {row['pred_class_vit']}")
+                axes[1, i].set_title(f"True: {row['pred_class_yolo']}\nPred: {row['pred_class_swin']}")
             except Exception as e:
                 print(f"이미지 로딩 오류: {row['patch_path']}. 오류: {e}")
                 axes[1, i].text(0.5, 0.5, 'Image Error', horizontalalignment='center', verticalalignment='center')
@@ -324,7 +324,7 @@ def plot_confidence_boxplot(csv_path, output_path):
     """
     df = pd.read_csv(csv_path)
     plt.figure(figsize=(16, 10))
-    sns.boxplot(x='pred_class_vit', y='confidence_vit', data=df, order=sorted(df['pred_class_vit'].unique()))
+    sns.boxplot(x='pred_class_swin', y='confidence_swin', data=df, order=sorted(df['pred_class_swin'].unique()))
     plt.xlabel('Predicted Class')
     plt.ylabel('Confidence Score')
     plt.title('Confidence Scores per Predicted Class')
@@ -344,7 +344,7 @@ def plot_checkpoint_performance(output_path):
 # 메인 함수 실행
 # ================================================
 
-def run_all_plots(input_dir, output_dir, vit_finetuned_dir, patches_csv, log_dir, device):
+def run_all_plots(input_dir, output_dir, swin_finetuned_dir, patches_csv, log_dir, device):
     """
     모든 분석 및 시각화를 실행하는 함수입니다.
     """
@@ -408,7 +408,7 @@ if __name__ == "__main__":
     run_all_plots(
         input_dir=INPUT_DIR,
         output_dir=OUTPUT_DIR,
-        vit_finetuned_dir=VIT_FINETUNED_DIR,
+        swin_finetuned_dir=VIT_FINETUNED_DIR,
         patches_csv=PATCHES_CSV,
         log_dir=LOG_DIR,
         device=device

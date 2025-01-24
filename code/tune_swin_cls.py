@@ -18,7 +18,7 @@ name = "VisDrone"
 
 # 여러 모델 디렉토리 리스트
 MODEL_DIRECTORIES = [
-    "/mnt/nas4/jyh/ultralytics/ViT_results/ViT_"+name+"/"+name
+    f"/mnt/nas4/jyh/ultralytics/ViT_results/ViT_{name}/{name}"
     #"/mnt/nas4/jyh/ultralytics/results_vit/frozen_transfer_cd5"
 ]
 
