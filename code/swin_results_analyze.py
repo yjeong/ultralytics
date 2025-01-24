@@ -27,10 +27,10 @@ INPUT_DIR = f"/mnt/nas4/jyh/ultralytics/ViT_results/ViT_{name}/{name}"
 OUTPUT_DIR = f"/mnt/nas4/jyh/ultralytics/ViT_results/ViT_{name}/{name}/swin_plots"  # 예: "/home/user/ViT_plots"
 
 # swin_finetuned 디렉토리 경로
-VIT_FINETUNED_DIR = os.path.join(INPUT_DIR, "swin_finetuned")
+SWIN_FINETUNED_DIR = os.path.join(INPUT_DIR, "swin_finetuned")
 
 # 로그 디렉토리 (TensorBoard 이벤트 파일이 저장된 곳)
-LOG_DIR = os.path.join(VIT_FINETUNED_DIR, "logs")  # 실제 로그 위치에 따라 수정
+LOG_DIR = os.path.join(SWIN_FINETUNED_DIR, "logs")  # 실제 로그 위치에 따라 수정
 
 # 패치 CSV 파일 경로
 PATCHES_CSV = os.path.join(INPUT_DIR, "patches_with_swin.csv")
@@ -408,7 +408,7 @@ if __name__ == "__main__":
     run_all_plots(
         input_dir=INPUT_DIR,
         output_dir=OUTPUT_DIR,
-        swin_finetuned_dir=VIT_FINETUNED_DIR,
+        swin_finetuned_dir=SWIN_FINETUNED_DIR,
         patches_csv=PATCHES_CSV,
         log_dir=LOG_DIR,
         device=device
