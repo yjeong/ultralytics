@@ -49,16 +49,16 @@ def run_training(data_yaml, model_path, epochs, imgsz, freeze, batch, cache, pro
 def main():
     # 학습할 데이터셋 목록
     data_files = [
-        "african-wildlife.yaml"
-        #"GlobalWheat2020.yaml"
+        "Object365.yaml"
+        #"coco8.yaml"
     ]
     
     # 공통 학습 설정
-    model_path = "yolo11x.pt"
+    model_path = "yolo11n.pt"
     epochs = 100
     imgsz = 640
     freeze = 10
-    batch = -1
+    batch = 4
     plots = True
     cache = True
     project = "/mnt/nas4/jyh/ultralytics/results"
@@ -66,8 +66,8 @@ def main():
     
     # 각 데이터셋에 대해 고유한 이름 지정
     names = [
-        "african-wildlife"
-        #"GlobalWheat2020"
+        "Object365"
+        #"coco8"
     ]
     
     # 하이퍼파라미터 설정

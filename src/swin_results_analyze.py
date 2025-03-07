@@ -18,7 +18,7 @@ plt.rcParams["figure.figsize"] = (12, 8)
 # 설정 섹션
 # ================================================
 
-name = "VOC"
+name = "VisDrone"
 
 # 입력 디렉토리 설정 (사용자 수정)
 INPUT_DIR = f"/mnt/nas4/jyh/ultralytics/ViT_results/ViT_{name}/{name}"
