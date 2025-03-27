@@ -138,7 +138,7 @@ def validate_args(format, passed_args, valid_args):
     Args:
         format (str): The export format.
         passed_args (Namespace): The arguments used during export.
-        valid_args (List): List of valid arguments for the format.
+        valid_args (list): List of valid arguments for the format.
 
     Raises:
         AssertionError: If an unsupported argument is used, or if the format lacks supported argument listings.
@@ -210,7 +210,7 @@ class Exporter:
 
     Attributes:
         args (SimpleNamespace): Configuration for the exporter.
-        callbacks (List, optional): List of callback functions.
+        callbacks (list, optional): List of callback functions.
     """
 
     def __init__(self, cfg=DEFAULT_CFG, overrides=None, _callbacks=None):
@@ -219,8 +219,8 @@ class Exporter:
 
         Args:
             cfg (str, optional): Path to a configuration file.
-            overrides (Dict, optional): Configuration overrides.
-            _callbacks (Dict, optional): Dictionary of callback functions.
+            overrides (dict, optional): Configuration overrides.
+            _callbacks (dict, optional): Dictionary of callback functions.
         """
         self.args = get_cfg(cfg, overrides)
         if self.args.format.lower() in {"coreml", "mlmodel"}:  # fix attempt for protobuf<3.20.x errors
@@ -665,7 +665,7 @@ class Exporter:
     @try_export
     def export_paddle(self, prefix=colorstr("PaddlePaddle:")):
         """YOLO Paddle export."""
-        check_requirements(("paddlepaddle-gpu" if torch.cuda.is_available() else "paddlepaddle", "x2paddle"))
+        check_requirements(("paddlepaddle-gpu" if torch.cuda.is_available() else "paddlepaddle<3.0.0", "x2paddle"))
         import x2paddle  # noqa
         from x2paddle.convert import pytorch2paddle  # noqa
 
@@ -773,7 +773,7 @@ class Exporter:
     def export_coreml(self, prefix=colorstr("CoreML:")):
         """YOLO CoreML export."""
         mlmodel = self.args.format.lower() == "mlmodel"  # legacy *.mlmodel export format requested
-        check_requirements("coremltools>=6.0,<=6.2" if mlmodel else "coremltools>=7.0")
+        check_requirements("coremltools>=6.0,<=6.2" if mlmodel else "coremltools>=8.0")
         import coremltools as ct  # noqa
 
         LOGGER.info(f"\n{prefix} starting export with coremltools {ct.__version__}...")
@@ -1222,12 +1222,12 @@ class Exporter:
             raise ValueError("IMX export is not supported for end2end models.")
         if "C2f" not in self.model.__str__():
             raise ValueError("IMX export is only supported for YOLOv8n detection models")
-        check_requirements(("model-compression-toolkit==2.1.1", "sony-custom-layers==0.2.0", "tensorflow==2.12.0"))
-        check_requirements("imx500-converter[pt]==3.14.3")  # Separate requirements for imx500-converter
+        check_requirements(("model-compression-toolkit>=2.3.0", "sony-custom-layers>=0.3.0"))
+        check_requirements("imx500-converter[pt]>=3.16.1")  # Separate requirements for imx500-converter
 
         import model_compression_toolkit as mct
         import onnx
-        from sony_custom_layers.pytorch.object_detection.nms import multiclass_nms
+        from sony_custom_layers.pytorch.nms import multiclass_nms
 
         LOGGER.info(f"\n{prefix} starting export with model_compression_toolkit {mct.__version__}...")
 
