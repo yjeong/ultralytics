@@ -25,7 +25,7 @@ import torch
 import tqdm
 
 from ultralytics import __version__
-from ultralytics.utils.patches import imread, imshow, imwrite, torch_load, torch_save  # for patches
+from ultralytics.utils.patches import imread, imshow, imwrite, torch_save  # for patches
 
 # PyTorch Multi-GPU DDP Constants
 RANK = int(os.getenv("RANK", -1))
@@ -131,7 +131,15 @@ os.environ["TORCH_CPP_LOG_LEVEL"] = "ERROR"  # suppress "NNPACK.cpp could not in
 os.environ["KINETO_LOG_LEVEL"] = "5"  # suppress verbose PyTorch profiler output when computing FLOPs
 
 if TQDM_RICH := str(os.getenv("YOLO_TQDM_RICH", False)).lower() == "true":
+    from rich.console import Console
+    from rich.progress import BarColumn
     from tqdm import rich
+
+    # Patch Rich Console width=200 and BarColumn bar_width=10 to solve width=80 missing bars bug
+    _console_init = Console.__init__
+    _bar_init = BarColumn.__init__
+    Console.__init__ = lambda self, *a, **k: _console_init(self, *a, **{**k, "width": 200})
+    BarColumn.__init__ = lambda self, bar_width=None, *a, **k: _bar_init(self, 10, *a, **k)
 
 
 class TQDM(rich.tqdm if TQDM_RICH else tqdm.tqdm):
@@ -170,6 +178,7 @@ class TQDM(rich.tqdm if TQDM_RICH else tqdm.tqdm):
         Notes:
             - The progress bar is disabled if VERBOSE is False or if 'disable' is explicitly set to True in kwargs.
             - The default bar format is set to TQDM_BAR_FORMAT unless overridden in kwargs.
+            - In GitHub Actions, progress bars only update at completion to keep CI logs clean.
 
         Examples:
             >>> from ultralytics.utils import TQDM
@@ -178,7 +187,9 @@ class TQDM(rich.tqdm if TQDM_RICH else tqdm.tqdm):
             ...     pass
         """
         warnings.filterwarnings("ignore", category=tqdm.TqdmExperimentalWarning)  # suppress tqdm.rich warning
-        kwargs["disable"] = not VERBOSE or kwargs.get("disable", False)
+        if is_github_action_running():
+            kwargs["mininterval"] = 60  # only update every 60 seconds
+        kwargs["disable"] = not VERBOSE or kwargs.get("disable", False) or LOGGER.getEffectiveLevel() > 20
         kwargs.setdefault("bar_format", TQDM_BAR_FORMAT)  # override default value if passed
         super().__init__(*args, **kwargs)
 
@@ -255,11 +266,8 @@ class DataExportMixin:
         Notes:
             Requires `lxml` package to be installed.
         """
-        from ultralytics.utils.checks import check_requirements
-
-        check_requirements("lxml")
         df = self.to_df(normalize=normalize, decimals=decimals)
-        return '<?xml version="1.0" encoding="utf-8"?>\n<root></root>' if df.empty else df.to_xml()
+        return '<?xml version="1.0" encoding="utf-8"?>\n<root></root>' if df.empty else df.to_xml(parser="etree")
 
     def to_html(self, normalize=False, decimals=5, index=False):
         """
@@ -1039,7 +1047,7 @@ def get_user_config_dir(sub_dir="Ultralytics"):
     # GCP and AWS lambda fix, only /tmp is writeable
     if not is_dir_writeable(path.parent):
         LOGGER.warning(
-            f"user config directory '{path}' is not writeable, defaulting to '/tmp' or CWD."
+            f"user config directory '{path}' is not writeable, defaulting to '/tmp' or CWD. "
             "Alternatively you can define a YOLO_CONFIG_DIR environment variable for this path."
         )
         path = Path("/tmp") / sub_dir if is_dir_writeable("/tmp") else Path().cwd() / sub_dir
@@ -1596,7 +1604,6 @@ TESTS_RUNNING = is_pytest_running() or is_github_action_running()
 set_sentry()
 
 # Apply monkey patches
-torch.load = torch_load
 torch.save = torch_save
 if WINDOWS:
     # Apply cv2 patches for non-ASCII and non-UTF characters in image paths

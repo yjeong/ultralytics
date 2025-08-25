@@ -16,6 +16,7 @@ from tests import CFG, MODEL, MODELS, SOURCE, SOURCES_LIST, TASK_MODEL_DATA, TMP
 from ultralytics import RTDETR, YOLO
 from ultralytics.cfg import TASK2DATA, TASKS
 from ultralytics.data.build import load_inference_source
+from ultralytics.data.utils import check_det_dataset
 from ultralytics.utils import (
     ARM64,
     ASSETS,
@@ -200,11 +201,12 @@ def test_track_stream(model):
         model.track(video_url, imgsz=160, tracker=custom_yaml)
 
 
-@pytest.mark.parametrize("task,model,data", TASK_MODEL_DATA)
-def test_val(task: str, model: str, data: str) -> None:
+@pytest.mark.parametrize("task,weight,data", TASK_MODEL_DATA)
+def test_val(task: str, weight: str, data: str) -> None:
     """Test the validation mode of the YOLO model."""
-    for plots in [True, False]:  # Test both cases i.e. plots=True and plots=False
-        metrics = YOLO(model).val(data=data, imgsz=32, plots=plots)
+    model = YOLO(weight)
+    for plots in {True, False}:  # Test both cases i.e. plots=True and plots=False
+        metrics = model.val(data=data, imgsz=32, plots=plots)
         metrics.to_df()
         metrics.to_csv()
         metrics.to_xml()
@@ -224,6 +226,15 @@ def test_train_scratch():
     model = YOLO(CFG)
     model.train(data="coco8.yaml", epochs=2, imgsz=32, cache="disk", batch=-1, close_mosaic=1, name="model")
     model(SOURCE)
+
+
+@pytest.mark.skipif(not ONLINE, reason="environment is offline")
+def test_train_ndjson():
+    """Test training the YOLO model using NDJSON format dataset."""
+    model = YOLO(WEIGHTS_DIR / "yolo11n.pt")
+    model.train(
+        data="https://github.com/ultralytics/assets/releases/download/v0.0.0/coco8-ndjson.ndjson", epochs=1, imgsz=32
+    )
 
 
 @pytest.mark.parametrize("scls", [False, True])
@@ -285,6 +296,7 @@ def test_results(model: str):
     temp_s = "https://ultralytics.com/images/boats.jpg" if model == "yolo11n-obb.pt" else SOURCE
     results = YOLO(WEIGHTS_DIR / model)([temp_s, temp_s], imgsz=160)
     for r in results:
+        assert len(r), f"'{model}' results should not be empty!"
         r = r.cpu().numpy()
         print(r, len(r), r.path)  # print numpy attributes
         r = r.to(device="cpu", dtype=torch.float32)
@@ -388,7 +400,7 @@ def test_cfg_init():
         check_dict_alignment({"a": 1}, {"b": 2})
     copy_default_cfg()
     (Path.cwd() / DEFAULT_CFG_PATH.name.replace(".yaml", "_copy.yaml")).unlink(missing_ok=False)
-    [smart_value(x) for x in ["none", "true", "false"]]
+    [smart_value(x) for x in {"none", "true", "false"}]
 
 
 def test_utils_init():
@@ -719,7 +731,7 @@ def test_grayscale(task: str, model: str, data: str) -> None:
     if task == "classify":  # not support grayscale classification yet
         return
     grayscale_data = Path(TMP) / f"{Path(data).stem}-grayscale.yaml"
-    data = YAML.load(checks.check_file(data))
+    data = check_det_dataset(data)
     data["channels"] = 1  # add additional channels key for grayscale
     YAML.save(grayscale_data, data)
     # remove npy files in train/val splits if exists, might be created by previous tests

@@ -621,6 +621,8 @@ def handle_yolo_settings(args: List[str]) -> None:
                 new = dict(parse_key_value_pair(a) for a in args)
                 check_dict_alignment(SETTINGS, new)
                 SETTINGS.update(new)
+                for k, v in new.items():
+                    LOGGER.info(f"✅ Updated '{k}={v}'")
 
         LOGGER.info(SETTINGS)  # print the current settings
         LOGGER.info(f"💡 Learn more about Ultralytics Settings at {url}")
@@ -952,9 +954,10 @@ def entrypoint(debug: str = "") -> None:
         from ultralytics import YOLO
 
         model = YOLO(model, task=task)
-    if isinstance(overrides.get("pretrained"), str):
-        model.load(overrides["pretrained"])
-
+        if "yoloe" in stem or "world" in stem:
+            cls_list = overrides.pop("classes", DEFAULT_CFG.classes)
+            if cls_list is not None and isinstance(cls_list, str):
+                model.set_classes(cls_list.split(","))  # convert "person, bus" -> ['person', ' bus'].
     # Task Update
     if task != model.task:
         if task:
