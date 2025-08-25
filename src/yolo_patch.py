@@ -12,7 +12,7 @@ import logging
 # 설정 섹션
 # ================================================
 
-name = "VOC"  # 데이터셋 이름
+name = "african-wildlife"  # 데이터셋 이름
 
 MODELS_CONFIG = [
     {

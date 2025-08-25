@@ -49,7 +49,7 @@ def run_training(data_yaml, model_path, epochs, imgsz, freeze, batch, cache, pro
 def main():
     # 학습할 데이터셋 목록
     data_files = [
-        "Object365.yaml"
+        "coco.yaml"
         #"coco8.yaml"
     ]
     
@@ -66,7 +66,7 @@ def main():
     
     # 각 데이터셋에 대해 고유한 이름 지정
     names = [
-        "Object365"
+        "coco"
         #"coco8"
     ]
     

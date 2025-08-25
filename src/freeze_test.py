@@ -19,7 +19,7 @@ def run_training(data_yaml, model_path, epochs, imgsz, freeze, batch, cache, pro
         f"name={name}",
         f"device={device}"
     ]
-    
+        
     # 유효한 하이퍼파라미터를 key=value 형식으로 명령어에 추가
     for key, value in hyperparams.items():
         command.append(f"{key}={value}")

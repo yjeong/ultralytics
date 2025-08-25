@@ -72,6 +72,12 @@ download: |
 
   # Convert
   annotations_dir = "Argoverse-HD/annotations/"
-  (dir / "Argoverse-1.1" / "tracking").rename(dir / "Argoverse-1.1" / "images")  # rename 'tracking' to 'images'
+  # Check if tracking directory exists before renaming
+  tracking_dir = dir / "Argoverse-1.1" / "tracking"
+  images_dir = dir / "Argoverse-1.1" / "images"
+  if tracking_dir.exists() and not images_dir.exists():
+      tracking_dir.rename(images_dir)  # rename 'tracking' to 'images'
   for d in "train.json", "val.json":
-      argoverse2yolo(dir / annotations_dir / d)  # convert Argoverse annotations to YOLO labels
+      annotation_file = dir / annotations_dir / d
+      if annotation_file.exists():
+          argoverse2yolo(annotation_file)  # convert Argoverse annotations to YOLO labels
