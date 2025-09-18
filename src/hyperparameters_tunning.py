@@ -1,3 +1,5 @@
+import os
+os.environ["MKL_THREADING_LAYER"] = "GNU"
 from ultralytics import YOLO
 
 # Initialize the YOLO model
@@ -30,8 +32,8 @@ search_space = {
 
 # Tune hyperparameters on COCO8 for 30 epochs
 model.tune(
-    data="code/work_cd.yaml",
-    epochs=5,
+    data="coco8.yaml",
+    epochs=50,
     iterations=300,
     optimizer="auto",
     space=search_space,
@@ -40,5 +42,5 @@ model.tune(
     val=True,
     project="hyp_param/",
     name="hyper_tunning",
-    device=1,
+    device=[0,1]
 )
