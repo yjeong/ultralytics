@@ -38,7 +38,6 @@ class TransformerEncoderLayer(nn.Module):
         """Initialize a transformer encoder layer.
 
         Args:
-            cross_attention: Cross-attention module for attending to image features
             d_model: Model dimension/hidden size
             dim_feedforward: Dimension of the feedforward network
             dropout: Dropout probability
@@ -47,6 +46,7 @@ class TransformerEncoderLayer(nn.Module):
             pos_enc_at_cross_attn_queries: Whether to add positional encodings to queries in cross-attention
             pre_norm: Whether to use pre-norm (True) or post-norm (False) architecture
             self_attention: Self-attention module
+            cross_attention: Cross-attention module for attending to image features
         """
         super().__init__()
         self.d_model = d_model
@@ -144,7 +144,6 @@ class TransformerEncoderLayer(nn.Module):
         memory_key_padding_mask: torch.Tensor = None,
         pos: torch.Tensor = None,
         query_pos: torch.Tensor = None,
-        # **kwargs,
     ) -> torch.Tensor:
         """Forward pass for pre-norm architecture.
 
@@ -160,8 +159,6 @@ class TransformerEncoderLayer(nn.Module):
             memory_key_padding_mask: Key padding mask for cross-attention
             pos: Positional encoding for memory
             query_pos: Positional encoding for query
-            attn_bias: Optional attention bias tensor
-            **kwargs: Additional keyword arguments
 
         Returns:
             Processed tensor
@@ -204,7 +201,6 @@ class TransformerEncoderLayer(nn.Module):
         memory_key_padding_mask: torch.Tensor = None,
         pos: torch.Tensor = None,
         query_pos: torch.Tensor = None,
-        # **kwds: Any,
     ) -> torch.Tensor:
         """Forward pass for the transformer encoder layer.
 
@@ -218,8 +214,6 @@ class TransformerEncoderLayer(nn.Module):
             memory_key_padding_mask: Key padding mask for cross-attention
             pos: Positional encoding for memory
             query_pos: Positional encoding for query
-            attn_bias: Optional attention bias tensor
-            **kwds: Additional keyword arguments
 
         Returns:
             Processed tensor after self-attention, cross-attention, and feedforward network

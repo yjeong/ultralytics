@@ -409,12 +409,12 @@ SECTION_ALIASES = {
 
 
 def _normalize_text(text: str) -> str:
-    """Normalize text while preserving markdown structures like tables, admonitions, and code blocks."""
+    """Normalize text while preserving Markdown structures like tables, admonitions, and code blocks."""
     if not text:
         return ""
-    # Check if text contains markdown structures that need line preservation
+    # Check if text contains Markdown structures that need line preservation
     if any(marker in text for marker in ("|", "!!!", "```", "\n#", "\n- ", "\n* ", "\n1. ", "\n    ")):
-        # Preserve markdown formatting - just strip trailing whitespace from lines
+        # Preserve Markdown formatting - just strip trailing whitespace from lines
         return "\n".join(line.rstrip() for line in text.splitlines()).strip()
     # Simple text - collapse single newlines within paragraphs
     paragraphs: list[str] = []
@@ -1130,6 +1130,7 @@ def build_reference_placeholders(update_nav: bool = True) -> list[str]:
     """Create minimal placeholder reference files (mkdocstrings-style) and optionally update nav."""
     nav_items: list[str] = []
     created = 0
+    orphans = set(REFERENCE_DIR.rglob("*.md"))
 
     for py_filepath in TQDM(list(PACKAGE_DIR.rglob("*.py")), desc="Building reference stubs", unit="file"):
         classes, functions = extract_classes_and_functions(py_filepath)
@@ -1138,11 +1139,15 @@ def build_reference_placeholders(update_nav: bool = True) -> list[str]:
         module_path = (
             f"{PACKAGE_DIR.name}.{py_filepath.relative_to(PACKAGE_DIR).with_suffix('').as_posix().replace('/', '.')}"
         )
-        exists = (REFERENCE_DIR / py_filepath.relative_to(PACKAGE_DIR).with_suffix(".md")).exists()
+        md_filepath = REFERENCE_DIR / py_filepath.relative_to(PACKAGE_DIR).with_suffix(".md")
+        exists = md_filepath.exists()
+        orphans.discard(md_filepath)
         md_rel = create_placeholder_markdown(py_filepath, module_path, classes, functions)
         nav_items.append(str(md_rel))
         if not exists:
             created += 1
+    for orphan in orphans:
+        orphan.unlink()
     if update_nav:
         update_mkdocs_file(create_nav_menu_yaml(nav_items))
     if created:
